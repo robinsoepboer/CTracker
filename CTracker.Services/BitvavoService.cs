@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using CTracker.Models.Bitvavo;
+using Microsoft.Extensions.Configuration;
 
 namespace CTracker.Services;
 
@@ -7,11 +8,13 @@ public class BitvavoService : IBitvavoService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISignatureService _signatureService;
+    private readonly IConfiguration _config;
     
-    public BitvavoService(IHttpClientFactory httpClientFactory, ISignatureService signatureService)
+    public BitvavoService(IHttpClientFactory httpClientFactory, ISignatureService signatureService, IConfiguration config)
     {
         _httpClientFactory = httpClientFactory;
         _signatureService = signatureService;
+        _config = config;
     }
 
     public async Task<List<AccountResponseItem>?> Balance()
@@ -74,7 +77,7 @@ public class BitvavoService : IBitvavoService
     
     private async Task SetHeaders(HttpClient httpClient, HttpMethod method, string url)
     {
-        httpClient.DefaultRequestHeaders.Add("Bitvavo-Access-Key", "");
+        httpClient.DefaultRequestHeaders.Add("Bitvavo-Access-Key", _config.GetSection("App:BitvavoKey").Value);
         httpClient.DefaultRequestHeaders.Add("Bitvavo-Access-Window", "60000");
 
         var timeResponse = await Time();
@@ -82,7 +85,7 @@ public class BitvavoService : IBitvavoService
         httpClient.DefaultRequestHeaders.Add("Bitvavo-Access-Timestamp", timeResponse?.time.ToString());
         
         var signature = _signatureService.Generate(
-            "",
+            _config.GetSection("App:BitvavoSecret").Value,
             timeResponse!.time.ToString(),
             method.ToString().ToUpper(),
             url
